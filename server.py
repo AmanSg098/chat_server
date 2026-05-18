@@ -35,11 +35,15 @@ def handle_client(cl_socket: socket.socket, cl_addr: tuple[str, int]) -> None:
         pass
 
     finally:
+        username: str = clients.get(cl_socket, None)
         if cl_socket in clients:
             clients.pop(cl_socket, None)
+        
 
         cl_socket.close()
-        print(f"{clients[cl_socket]} left the chat.")
+        leave_message: str = f"{username} left the chat"
+        print(f"{username} left the chat.")
+        broadcast(leave_message.encode("utf-8"))
 
 
 server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

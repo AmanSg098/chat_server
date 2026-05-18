@@ -41,7 +41,7 @@ thread.start()
 
 try:
     while True:
-        message: str = input()
+        message: str = input(f"You : ")
 
         client.sendall(
             message.encode("utf-8")
