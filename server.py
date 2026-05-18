@@ -4,12 +4,15 @@ import threading
 
 import constants
 
-clients: list[socket.socket] = []
+clients: dict[socket.socket, str] = {}
 
-def broadcast(message: bytes, sender: socket.socket) -> None:
+def broadcast(message: bytes, sender: socket.socket | None = None) -> None:
     for client in clients:
         if client != sender:
-            client.send(message)
+            try:
+                client.sendall(message)
+            except OSError:
+                pass
 
 
 def handle_client(cl_socket: socket.socket, cl_addr: tuple[str, int]) -> None:
@@ -22,7 +25,7 @@ def handle_client(cl_socket: socket.socket, cl_addr: tuple[str, int]) -> None:
 
             print(f"{cl_addr}: {received_message}")
             
-            formatted_message: str = f"{cl_addr}: {received_message}"
+            formatted_message: str = f"{clients[cl_socket]}: {received_message}"
             broadcast(
                 formatted_message.encode("utf-8"),
                 cl_socket
@@ -33,10 +36,10 @@ def handle_client(cl_socket: socket.socket, cl_addr: tuple[str, int]) -> None:
 
     finally:
         if cl_socket in clients:
-            clients.remove(cl_socket)
+            clients.pop(cl_socket, None)
 
         cl_socket.close()
-        print(f"Connection from {cl_addr} closed")
+        print(f"{clients[cl_socket]} left the chat.")
 
 
 server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,9 +50,15 @@ server.listen(5)
 try:
     while True:
         client_socket, client_addr = server.accept()
-
-        clients.append(client_socket)
         print(f"Connection from {client_addr}")
+
+        client_socket.send("Input user name : ".encode("utf-8"))
+        client_username: str = client_socket.recv(constants.BYTES).decode("utf-8")
+
+        clients[client_socket] = client_username
+        join_message: str = (f"{client_username} joined the chat")
+        print(join_message)
+        broadcast(join_message.encode("utf-8"))
 
         thread: threading.Thread = threading.Thread(
             target=handle_client,
